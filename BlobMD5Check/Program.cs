@@ -9,7 +9,8 @@ namespace BlobMD5Check
     {
         static void Main()
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=***;AccountKey=***;EndpointSuffix=core.windows.net";
+            string connectionString = "DefaultEndpointsProtocol=https;AccountName=***;AccountKey=***;EndpointSuffix=core.windows.net" +
+                "";
 
             Console.WriteLine("=============== Upload Hash OK ===============");
             UploadHashOK(connectionString);
@@ -33,8 +34,14 @@ namespace BlobMD5Check
             File.WriteAllText(localFilePath, content);
             Console.WriteLine($"Created a local file: {localFilePath}");
 
-            byte[] hashBytes = calculateHashBytes(localFilePath);
-            string hash = calculateHashString(localFilePath);
+            byte[] hashBytes;
+            string hash;
+            using (var stream = File.OpenRead(localFilePath))
+            using (var md5 = MD5.Create())
+            {
+                hashBytes = md5.ComputeHash(stream);
+                hash = Convert.ToBase64String(hashBytes);
+            }
             Console.WriteLine($"Calculated a local file hash: {hash}");
 
             string containerName = Guid.NewGuid().ToString();
@@ -69,8 +76,12 @@ namespace BlobMD5Check
             File.WriteAllText(localFilePath, content);
             Console.WriteLine($"Created a local file: {localFilePath}");
 
-            byte[] hashBytes = calculateHashBytes(localFilePath);
-            string hash = calculateHashString(localFilePath);
+            string hash;
+            using (var stream = File.OpenRead(localFilePath))
+            using (var md5 = MD5.Create())
+            {
+                hash = Convert.ToBase64String(md5.ComputeHash(stream));
+            }
             Console.WriteLine($"Calculated a local file hash: {hash}");
 
             string containerName = Guid.NewGuid().ToString();
@@ -110,8 +121,14 @@ namespace BlobMD5Check
             File.WriteAllText(localFilePath, content);
             Console.WriteLine($"Created a local file: {localFilePath}");
 
-            byte[] hashBytes = calculateHashBytes(localFilePath);
-            string hash = calculateHashString(localFilePath);
+            byte[] hashBytes;
+            string hash;
+            using (var stream = File.OpenRead(localFilePath))
+            using (var md5 = MD5.Create())
+            {
+                hashBytes = md5.ComputeHash(stream);
+                hash = Convert.ToBase64String(hashBytes);
+            }
             Console.WriteLine($"Calculated a local file hash: {hash}");
 
             string containerName = Guid.NewGuid().ToString();
@@ -133,7 +150,12 @@ namespace BlobMD5Check
                 File.WriteAllBytes(downloadFilePath, response.Value.Content.ToArray());
                 Console.WriteLine($"Downloaded the blob. Hash from blob download result: {responseHash}");
 
-                string downloadedFileHash = calculateHashString(downloadFilePath);
+                string downloadedFileHash;
+                using (var stream = File.OpenRead(downloadFilePath))
+                using (var md5 = MD5.Create())
+                {
+                    downloadedFileHash = Convert.ToBase64String(md5.ComputeHash(stream));
+                }
                 if (responseHash.Equals(downloadedFileHash))
                 {
                     Console.WriteLine($"Hash from response ({responseHash}) and hash from downloaded file({downloadedFileHash}) matched!");
@@ -143,24 +165,6 @@ namespace BlobMD5Check
             finally
             {
                 container.Delete();
-            }
-        }
-
-        static byte[] calculateHashBytes(string localFilePath)
-        {
-            using (var stream = File.OpenRead(localFilePath))
-            using (var md5 = MD5.Create())
-            {
-                return md5.ComputeHash(stream);
-            }
-        }
-
-        static string calculateHashString(string localFilePath)
-        {
-            using (var stream = File.OpenRead(localFilePath))
-            using (var md5 = MD5.Create())
-            {
-                return Convert.ToBase64String(md5.ComputeHash(stream));
             }
         }
     }
