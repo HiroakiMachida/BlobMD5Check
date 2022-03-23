@@ -9,8 +9,7 @@ namespace BlobMD5Check
     {
         static void Main()
         {
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=***;AccountKey=***;EndpointSuffix=core.windows.net" +
-                "";
+            string connectionString = "DefaultEndpointsProtocol=https;AccountName=***;AccountKey=***;EndpointSuffix=core.windows.net";
 
             Console.WriteLine("=============== Upload Hash OK ===============");
             UploadHashOK(connectionString);
@@ -121,16 +120,6 @@ namespace BlobMD5Check
             File.WriteAllText(localFilePath, content);
             Console.WriteLine($"Created a local file: {localFilePath}");
 
-            byte[] hashBytes;
-            string hash;
-            using (var stream = File.OpenRead(localFilePath))
-            using (var md5 = MD5.Create())
-            {
-                hashBytes = md5.ComputeHash(stream);
-                hash = Convert.ToBase64String(hashBytes);
-            }
-            Console.WriteLine($"Calculated a local file hash: {hash}");
-
             string containerName = Guid.NewGuid().ToString();
             BlobContainerClient container = new BlobContainerClient(connectionString, containerName);
             container.Create();
@@ -139,15 +128,13 @@ namespace BlobMD5Check
 
             try
             {
-                var blobHeaders = new BlobHttpHeaders { ContentHash = hashBytes };
-                var blobUploadOptions = new BlobUploadOptions { HttpHeaders = blobHeaders };
-
-                blobClient.Upload(localFilePath, blobUploadOptions);
+                blobClient.Upload(localFilePath);
                 var response = blobClient.DownloadContent();
 
                 string downloadFilePath = localFilePath.Replace(".txt", "DOWNLOADED.txt");
-                string responseHash = Convert.ToBase64String(response.Value.Details.ContentHash);
                 File.WriteAllBytes(downloadFilePath, response.Value.Content.ToArray());
+
+                string responseHash = Convert.ToBase64String(response.Value.Details.ContentHash);
                 Console.WriteLine($"Downloaded the blob. Hash from blob download result: {responseHash}");
 
                 string downloadedFileHash;
@@ -156,9 +143,10 @@ namespace BlobMD5Check
                 {
                     downloadedFileHash = Convert.ToBase64String(md5.ComputeHash(stream));
                 }
-                if (responseHash.Equals(downloadedFileHash))
+
+                if (downloadedFileHash.Equals(responseHash))
                 {
-                    Console.WriteLine($"Hash from response ({responseHash}) and hash from downloaded file({downloadedFileHash}) matched!");
+                    Console.WriteLine($"Hash from downloaded file({downloadedFileHash}) and hash from response ({responseHash}) matched!");
                 }
 
             }
